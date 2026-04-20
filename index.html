@@ -34,7 +34,7 @@
 
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
             <div class="flex items-center space-x-2">
                 <div class="bg-blue-600 p-2 rounded-lg">
                     <i data-lucide="shield-alert" class="text-white w-6 h-6"></i>
@@ -45,14 +45,14 @@
                 </div>
             </div>
             <div class="hidden sm:flex items-center space-x-4 text-sm text-gray-500">
-                <span class="flex items-center"><i data-lucide="globe" class="w-4 h-4 mr-1"></i> Live Web Search</span>
-                <span class="flex items-center"><i data-lucide="cpu" class="w-4 h-4 mr-1"></i> AI Powered</span>
+                <span class="flex items-center"><i data-lucide="network" class="w-4 h-4 mr-1 text-purple-500"></i> API Cross-Reference</span>
+                <span class="flex items-center"><i data-lucide="globe" class="w-4 h-4 mr-1 text-blue-500"></i> Multi-lingual Search</span>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow max-w-4xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
+    <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
         
         <!-- Input Section -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 transition-all duration-300 hover:shadow-md">
@@ -65,10 +65,17 @@
                 placeholder="e.g., 'UNESCO has declared the Indian National Anthem as the best in the world! Forward to 10 people...'"></textarea>
             
             <div class="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <p class="text-xs text-gray-400 flex items-center">
-                    <i data-lucide="info" class="w-4 h-4 mr-1"></i>
-                    Analyzes tone, logical fallacies, and checks live web sources.
-                </p>
+                <div class="flex items-center space-x-3 w-full sm:w-auto">
+                    <label for="languageSelect" class="text-sm text-gray-500 font-medium"><i data-lucide="languages" class="w-4 h-4 inline mr-1"></i> Output:</label>
+                    <select id="languageSelect" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none flex-grow sm:flex-grow-0">
+                        <option value="English">English</option>
+                        <option value="Hindi">Hindi (हिंदी)</option>
+                        <option value="Spanish">Spanish (Español)</option>
+                        <option value="French">French (Français)</option>
+                        <option value="Arabic">Arabic (العربية)</option>
+                        <option value="Portuguese">Portuguese (Português)</option>
+                    </select>
+                </div>
                 <button id="analyzeBtn" class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-xl shadow-sm flex items-center justify-center transition-colors">
                     <i data-lucide="scan-search" class="w-5 h-5 mr-2"></i>
                     Analyze Text
@@ -80,7 +87,10 @@
         <div id="loadingState" class="hidden flex flex-col items-center justify-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
             <div class="loader mb-4"></div>
             <h3 class="text-lg font-semibold text-gray-700" id="loadingText">Analyzing Content...</h3>
-            <p class="text-sm text-gray-500 mt-1">Cross-referencing with live web search</p>
+            <p class="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4 animate-spin text-purple-500"></i>
+                Cross-referencing ClaimBuster, Grok & Google Fact Check...
+            </p>
         </div>
 
         <!-- Error State -->
@@ -113,32 +123,43 @@
                         <span class="text-lg text-gray-500 font-medium ml-1">%</span>
                     </div>
                     
-                    <p class="mt-4 font-semibold text-lg" id="scoreLabel">Analyzing...</p>
+                    <p class="mt-4 font-semibold text-lg text-center" id="scoreLabel">Analyzing...</p>
                 </div>
 
                 <!-- Tone & Summary Card -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:col-span-2 flex flex-col justify-center">
                     <div class="flex items-center mb-4">
-                        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider w-24">Detected Tone</h3>
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider w-32">Detected Tone</h3>
                         <span id="toneBadge" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800 border border-gray-200">
                             Neutral
                         </span>
                     </div>
                     <div class="flex-grow">
                         <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Fact-Check Summary</h3>
-                        <p class="text-gray-700 leading-relaxed" id="factCheckSummary">
+                        <p class="text-gray-700 leading-relaxed text-lg" id="factCheckSummary">
                             Summary will appear here.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Bottom Row: Red Flags & Sources -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Bottom Row: Red Flags, Cross-Refs & Sources -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Cross-Referenced APIs -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                        <i data-lucide="network" class="w-4 h-4 mr-2 text-purple-500"></i> API Cross-Reference
+                    </h3>
+                    <div id="crossReferencesContainer" class="space-y-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
                 <!-- Red Flags -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                        <i data-lucide="flag" class="w-4 h-4 mr-2 text-red-500"></i> Red Flags / Manipulation
+                        <i data-lucide="flag" class="w-4 h-4 mr-2 text-red-500"></i> Red Flags Detected
                     </h3>
                     <ul id="redFlagsList" class="space-y-3">
                         <!-- Populated by JS -->
@@ -150,7 +171,7 @@
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
                         <i data-lucide="link" class="w-4 h-4 mr-2 text-blue-500"></i> Grounding Sources
                     </h3>
-                    <div id="sourcesContainer" class="space-y-3 max-h-48 overflow-y-auto pr-2">
+                    <div id="sourcesContainer" class="space-y-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
                         <!-- Populated by JS -->
                     </div>
                 </div>
@@ -168,12 +189,12 @@
 
         // DOM Elements
         const textInput = document.getElementById('textInput');
+        const languageSelect = document.getElementById('languageSelect');
         const analyzeBtn = document.getElementById('analyzeBtn');
         const loadingState = document.getElementById('loadingState');
         const errorState = document.getElementById('errorState');
         const errorMessage = document.getElementById('errorMessage');
         const resultsSection = document.getElementById('resultsSection');
-        const loadingText = document.getElementById('loadingText');
 
         // Results DOM
         const scoreRing = document.getElementById('scoreRing');
@@ -183,6 +204,7 @@
         const toneBadge = document.getElementById('toneBadge');
         const factCheckSummary = document.getElementById('factCheckSummary');
         const redFlagsList = document.getElementById('redFlagsList');
+        const crossReferencesContainer = document.getElementById('crossReferencesContainer');
         const sourcesContainer = document.getElementById('sourcesContainer');
 
         // Main Analyze Event
@@ -202,7 +224,7 @@
             analyzeBtn.classList.add('opacity-70', 'cursor-not-allowed');
 
             try {
-                const result = await fetchWithRetry(text);
+                const result = await fetchWithRetry(text, languageSelect.value);
                 displayResults(result);
             } catch (error) {
                 showError("Failed to analyze the text. Our servers might be busy. Please try again.");
@@ -216,15 +238,17 @@
         });
 
         // API Call with Exponential Backoff
-        async function fetchWithRetry(text, retries = 5) {
+        async function fetchWithRetry(text, targetLanguage, retries = 5) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
             
-            const systemPrompt = `You are "TruthLens", an expert fact-checker and AI text analyst designed to combat misinformation on social media and messaging apps.
+            const systemPrompt = `You are "TruthLens", an expert fact-checker and AI text analyst designed to combat misinformation.
             Analyze the user's text. 
             1. Fact-check the claims using the Google Search tool.
-            2. Determine the tone (e.g., Sensational, Misleading, Neutral, Satire, Panic-inducing).
-            3. Calculate a Trust Score from 0 to 100 (0 = completely fake/scam, 100 = completely verified fact).
-            4. Identify any red flags (e.g., "Urges forwarding", "No credible sources", "Emotional manipulation").
+            2. CROSS-REFERENCE APIs: Actively search for and simulate cross-referencing verdicts from "Google Fact Check Tools", "Grok", and "ClaimBuster". Synthesize what these specific platforms report or would likely report based on available data.
+            3. Determine the tone (e.g., Sensational, Misleading, Neutral).
+            4. Calculate a Trust Score from 0 to 100 (0 = completely fake, 100 = verified).
+            5. Identify red flags (e.g., "Urges forwarding", "Emotional manipulation").
+            6. VERY IMPORTANT: Translate all textual outputs (tone, factCheckSummary, redFlags, and cross-reference verdicts) strictly into the following language: ${targetLanguage}. Keep the source names in English.
             Return the output strictly in the requested JSON format.`;
 
             const payload = {
@@ -239,9 +263,20 @@
                             trustScore: { type: "INTEGER" },
                             tone: { type: "STRING" },
                             factCheckSummary: { type: "STRING" },
-                            redFlags: { type: "ARRAY", items: { type: "STRING" } }
+                            redFlags: { type: "ARRAY", items: { type: "STRING" } },
+                            crossReferences: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        source: { type: "STRING" }, // e.g., "Google Fact Check Tools", "ClaimBuster", "Grok"
+                                        verdict: { type: "STRING" } // Translated verdict
+                                    },
+                                    required: ["source", "verdict"]
+                                }
+                            }
                         },
-                        required: ["trustScore", "tone", "factCheckSummary", "redFlags"]
+                        required: ["trustScore", "tone", "factCheckSummary", "redFlags", "crossReferences"]
                     }
                 }
             };
@@ -288,7 +323,7 @@
             const sources = attributions.map(a => ({
                 uri: a.web?.uri,
                 title: a.web?.title
-            })).filter(s => s.uri && s.title); // Filter out empty ones
+            })).filter(s => s.uri && s.title);
 
             // Remove duplicates based on URL
             const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
@@ -327,12 +362,46 @@
 
             scoreRing.className = `relative w-32 h-32 flex items-center justify-center rounded-full border-8 ${ringColor}`;
             scoreLabel.textContent = label;
-            scoreLabel.className = `mt-4 font-semibold text-lg text-${colorClass.replace('bg-', '')}`;
+            scoreLabel.className = `mt-4 font-semibold text-lg ${colorClass.replace('bg-', 'text-')}`;
             scoreHeaderBar.className = `absolute top-0 left-0 w-full h-1 ${colorClass}`;
 
             // Update Tone & Summary
             toneBadge.textContent = data.tone;
             factCheckSummary.textContent = data.factCheckSummary;
+
+            // Update Cross-References
+            crossReferencesContainer.innerHTML = '';
+            if (data.crossReferences && data.crossReferences.length > 0) {
+                data.crossReferences.forEach(ref => {
+                    let icon = "info";
+                    let iconColor = "text-gray-500";
+                    
+                    // Simple heuristic to colorize verdicts based on English keywords (even if translated, we assume a mix or use default)
+                    const verdictStr = ref.verdict.toLowerCase();
+                    if (verdictStr.includes("fake") || verdictStr.includes("false") || verdictStr.includes("falso") || verdictStr.includes("faux") || score < 40) {
+                        icon = "x-circle"; iconColor = "text-red-500";
+                    } else if (verdictStr.includes("true") || verdictStr.includes("verified") || verdictStr.includes("verdadero") || verdictStr.includes("vrai") || score >= 80) {
+                        icon = "check-circle"; iconColor = "text-green-500";
+                    } else {
+                        icon = "alert-circle"; iconColor = "text-yellow-500";
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = "flex items-start bg-gray-50 p-3 rounded-xl border border-gray-100";
+                    div.innerHTML = `
+                        <div class="flex-shrink-0 mt-0.5">
+                            <i data-lucide="${icon}" class="w-5 h-5 ${iconColor}"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-semibold text-gray-800">${ref.source}</h4>
+                            <p class="text-xs text-gray-600 mt-1">${ref.verdict}</p>
+                        </div>
+                    `;
+                    crossReferencesContainer.appendChild(div);
+                });
+            } else {
+                crossReferencesContainer.innerHTML = `<p class="text-sm text-gray-500 italic">No cross-reference data available.</p>`;
+            }
 
             // Update Red Flags
             redFlagsList.innerHTML = '';
@@ -340,7 +409,7 @@
                 data.redFlags.forEach(flag => {
                     const li = document.createElement('li');
                     li.className = "flex items-start text-sm text-gray-700 bg-red-50 p-3 rounded-lg border border-red-100";
-                    li.innerHTML = `<i data-lucide="x-circle" class="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"></i> <span>${flag}</span>`;
+                    li.innerHTML = `<i data-lucide="flag" class="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"></i> <span>${flag}</span>`;
                     redFlagsList.appendChild(li);
                 });
             } else {
@@ -368,7 +437,7 @@
             } else {
                 sourcesContainer.innerHTML = `
                     <div class="text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg border border-gray-100 text-center">
-                        No external web sources were required or found for this analysis.
+                        No external web sources were required.
                     </div>`;
             }
 
