@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en-IN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Lie Detector | News & WhatsApp Forward Analyzer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="[https://unpkg.com/lucide@latest](https://unpkg.com/lucide@latest)"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap)');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         
         .loader {
@@ -107,7 +107,7 @@
             <h3 class="text-lg font-semibold text-gray-700" id="loadingText">Analyzing Content...</h3>
             <p class="text-sm text-gray-500 mt-2 flex items-center gap-2">
                 <i data-lucide="refresh-cw" class="w-4 h-4 animate-spin text-purple-500"></i>
-                Checking AI Models & Cross-referencing...
+                Searching web and cross-referencing APIs...
             </p>
         </div>
 
@@ -203,7 +203,6 @@
         lucide.createIcons();
 
         const rawApiKey = "AIzaSyBEoiLv7z9aDvKCwFsm-FBBpZbwxYXCqmI"; 
-        // ----------------------------------------
         const apiKey = rawApiKey.trim();
 
         // DOM Elements
@@ -226,7 +225,6 @@
         const crossReferencesContainer = document.getElementById('crossReferencesContainer');
         const sourcesContainer = document.getElementById('sourcesContainer');
 
-        // Main Analyze Event
         analyzeBtn.addEventListener('click', async () => {
             const text = textInput.value.trim();
             if (!text) {
@@ -238,7 +236,6 @@
                 return;
             }
 
-            // UI Reset & Loading
             errorState.classList.add('hidden');
             resultsSection.classList.add('hidden');
             loadingState.classList.remove('hidden');
@@ -260,10 +257,8 @@
             }
         });
 
-        // AI Connection Logic with AUTO MODEL FALLBACK
         async function fetchWithModelFallback(text, targetLanguage) {
             
-            // List of models to try in descending order of preference
             const modelsToTry = [
                 "gemini-2.5-flash",
                 "gemini-2.0-flash",
@@ -271,6 +266,8 @@
                 "gemini-1.5-pro-latest"
             ];
             
+            // WE REMOVED responseMimeType from the config to fix the 400 error.
+            // INSTEAD, we explicitly instruct the AI to output RAW JSON in the prompt.
             const systemPrompt = `You are "TruthLens", an expert fact-checker and AI text analyst designed to combat misinformation.
             Analyze the user's text. 
             1. Fact-check the claims using the Google Search tool.
@@ -279,43 +276,35 @@
             4. Calculate a Trust Score from 0 to 100 (0 = completely fake, 100 = verified).
             5. Identify red flags (e.g., "Urges forwarding", "Emotional manipulation").
             6. VERY IMPORTANT: Translate all textual outputs (tone, factCheckSummary, redFlags, and cross-reference verdicts) strictly into the following language: ${targetLanguage}. Keep the source names in English.
-            Return the output strictly in the requested JSON format.`;
+            
+            YOU MUST RETURN YOUR ANSWER AS A VALID JSON OBJECT ONLY. 
+            Do NOT wrap the JSON in markdown code blocks. Do NOT add any extra text before or after the JSON.
+            Use EXACTLY this schema:
+            {
+                "trustScore": 45,
+                "tone": "Example Tone",
+                "factCheckSummary": "Example summary text...",
+                "redFlags": ["Flag 1", "Flag 2"],
+                "crossReferences": [
+                    {"source": "Google Fact Check Tools", "verdict": "Verdict text..."},
+                    {"source": "ClaimBuster", "verdict": "Verdict text..."},
+                    {"source": "Grok", "verdict": "Verdict text..."}
+                ]
+            }`;
 
             const payload = {
                 contents: [{ parts: [{ text: text }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 tools: [{ googleSearch: {} }],
                 generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            trustScore: { type: "INTEGER" },
-                            tone: { type: "STRING" },
-                            factCheckSummary: { type: "STRING" },
-                            redFlags: { type: "ARRAY", items: { type: "STRING" } },
-                            crossReferences: {
-                                type: "ARRAY",
-                                items: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        source: { type: "STRING" }, 
-                                        verdict: { type: "STRING" } 
-                                    },
-                                    required: ["source", "verdict"]
-                                }
-                            }
-                        },
-                        required: ["trustScore", "tone", "factCheckSummary", "redFlags", "crossReferences"]
-                    }
+                    temperature: 0.1 // Keep it low so the JSON doesn't get messed up
                 }
             };
 
             let lastErrorMessage = "";
 
-            // Loop through each model and try it
             for (const modelName of modelsToTry) {
-                console.log(`Attempting to use model: ${modelName}`);
+                console.log(`Attempting model: ${modelName}`);
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
                 
                 try {
@@ -329,24 +318,20 @@
                         const errorData = await response.json().catch(() => null);
                         const apiMsg = errorData?.error?.message || response.statusText;
                         
-                        // If model is not found/supported, skip to the next model in the array
                         if (response.status === 404 || apiMsg.includes("not found")) {
-                            console.warn(`Model ${modelName} rejected by Google. Trying next...`);
+                            console.warn(`Model ${modelName} not found. Trying next...`);
                             lastErrorMessage = `Model ${modelName} failed.`;
                             continue; 
                         }
                         
-                        // If it's a different error (like bad API key), throw it immediately to stop the loop
                         throw new Error(`HTTP Error ${response.status} - Google API Says: "${apiMsg}"`);
                     }
 
-                    // Success!
-                    console.log(`Success! ${modelName} successfully connected.`);
+                    console.log(`Success! ${modelName} connected.`);
                     const data = await response.json();
                     return parseApiResponse(data);
 
                 } catch (error) {
-                    // If the error was explicitly thrown above, catch it. If it's just a 404, the loop continues.
                     lastErrorMessage = error.message;
                     if (!error.message.includes("failed")) {
                         throw error; 
@@ -354,32 +339,37 @@
                 }
             }
 
-            // If the code reaches here, ALL models failed
-            throw new Error(`All supported AI models failed to connect for your API key. Last error: ${lastErrorMessage}`);
+            throw new Error(`All supported AI models failed to connect. Last error: ${lastErrorMessage}`);
         }
 
         function parseApiResponse(data) {
             const candidate = data.candidates?.[0];
             if (!candidate) throw new Error("No candidate returned from API. Google may have blocked the prompt for safety reasons.");
 
-            // Extract JSON content
-            const jsonText = candidate.content?.parts?.[0]?.text;
-            let parsedData;
-            try {
-                parsedData = JSON.parse(jsonText);
-            } catch (e) {
-                console.error("Failed to parse JSON from AI", jsonText);
-                throw new Error("The AI returned data in an invalid format. Please try again.");
+            // Extract text response
+            let aiText = candidate.content?.parts?.[0]?.text;
+            
+            // CLEAN THE TEXT: Sometimes AI ignores instructions and adds markdown ```json blocks anyway.
+            // This strips out any markdown code blocks so JSON.parse won't crash.
+            if (aiText.includes("```")) {
+                aiText = aiText.replace(/```json/gi, '').replace(/```/gi, '').trim();
             }
 
-            // Extract Grounding Sources (Supporting both public 'chunks' and older 'attributions')
+            let parsedData;
+            try {
+                parsedData = JSON.parse(aiText);
+            } catch (e) {
+                console.error("Failed to parse JSON. Raw AI text was:", aiText);
+                throw new Error("The AI returned an invalid text format instead of JSON. Please try analyzing again.");
+            }
+
+            // Extract Grounding Sources
             const chunks = candidate.groundingMetadata?.groundingChunks || candidate.groundingMetadata?.groundingAttributions || [];
             const sources = chunks.map(chunk => ({
                 uri: chunk.web?.uri,
                 title: chunk.web?.title
             })).filter(s => s.uri && s.title);
 
-            // Remove duplicates based on URL
             const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
 
             return {
