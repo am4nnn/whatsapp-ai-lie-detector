@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-IN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -107,7 +107,7 @@
             <h3 class="text-lg font-semibold text-gray-700" id="loadingText">Analyzing Content...</h3>
             <p class="text-sm text-gray-500 mt-2 flex items-center gap-2">
                 <i data-lucide="refresh-cw" class="w-4 h-4 animate-spin text-purple-500"></i>
-                Cross-referencing ClaimBuster, Grok & Google Fact Check...
+                Checking AI Models & Cross-referencing...
             </p>
         </div>
 
@@ -202,12 +202,8 @@
         // Initialize Icons
         lucide.createIcons();
 
-        // --- IMPORTANT: PUT YOUR API KEY HERE ---
-        // Ensure there are no spaces inside the quotes!
         const rawApiKey = "AIzaSyBEoiLv7z9aDvKCwFsm-FBBpZbwxYXCqmI"; 
         // ----------------------------------------
-
-        // Safely trim any accidental spaces from the key
         const apiKey = rawApiKey.trim();
 
         // DOM Elements
@@ -251,7 +247,7 @@
             analyzeBtn.classList.add('opacity-70', 'cursor-not-allowed');
 
             try {
-                const result = await fetchWithRetry(text, languageSelect.value);
+                const result = await fetchWithModelFallback(text, languageSelect.value);
                 displayResults(result);
             } catch (error) {
                 showError(error.message || "Failed to analyze the text. Please check the console for details.");
@@ -264,11 +260,16 @@
             }
         });
 
-        // API Call with Exponential Backoff
-        async function fetchWithRetry(text, targetLanguage, retries = 3) {
+        // AI Connection Logic with AUTO MODEL FALLBACK
+        async function fetchWithModelFallback(text, targetLanguage) {
             
-            // Using the universally supported gemini-1.5-flash model
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            // List of models to try in descending order of preference
+            const modelsToTry = [
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash-latest",
+                "gemini-1.5-pro-latest"
+            ];
             
             const systemPrompt = `You are "TruthLens", an expert fact-checker and AI text analyst designed to combat misinformation.
             Analyze the user's text. 
@@ -283,7 +284,6 @@
             const payload = {
                 contents: [{ parts: [{ text: text }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
-                // Use the correct public syntax: googleSearch (camelCase)
                 tools: [{ googleSearch: {} }],
                 generationConfig: {
                     responseMimeType: "application/json",
@@ -311,8 +311,13 @@
                 }
             };
 
-            let delay = 1000;
-            for (let i = 0; i < retries; i++) {
+            let lastErrorMessage = "";
+
+            // Loop through each model and try it
+            for (const modelName of modelsToTry) {
+                console.log(`Attempting to use model: ${modelName}`);
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -321,23 +326,36 @@
                     });
 
                     if (!response.ok) {
-                        // Extract exact error message from Google's servers
                         const errorData = await response.json().catch(() => null);
-                        let detailMsg = `HTTP Error ${response.status}`;
-                        if (errorData && errorData.error && errorData.error.message) {
-                            detailMsg += ` - Google API Says: "${errorData.error.message}"`;
+                        const apiMsg = errorData?.error?.message || response.statusText;
+                        
+                        // If model is not found/supported, skip to the next model in the array
+                        if (response.status === 404 || apiMsg.includes("not found")) {
+                            console.warn(`Model ${modelName} rejected by Google. Trying next...`);
+                            lastErrorMessage = `Model ${modelName} failed.`;
+                            continue; 
                         }
-                        throw new Error(detailMsg);
+                        
+                        // If it's a different error (like bad API key), throw it immediately to stop the loop
+                        throw new Error(`HTTP Error ${response.status} - Google API Says: "${apiMsg}"`);
                     }
 
+                    // Success!
+                    console.log(`Success! ${modelName} successfully connected.`);
                     const data = await response.json();
                     return parseApiResponse(data);
+
                 } catch (error) {
-                    if (i === retries - 1) throw error;
-                    await new Promise(res => setTimeout(res, delay));
-                    delay *= 2; 
+                    // If the error was explicitly thrown above, catch it. If it's just a 404, the loop continues.
+                    lastErrorMessage = error.message;
+                    if (!error.message.includes("failed")) {
+                        throw error; 
+                    }
                 }
             }
+
+            // If the code reaches here, ALL models failed
+            throw new Error(`All supported AI models failed to connect for your API key. Last error: ${lastErrorMessage}`);
         }
 
         function parseApiResponse(data) {
