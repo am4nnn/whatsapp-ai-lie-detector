@@ -119,7 +119,7 @@
                 </div>
                 <div class="ml-3">
                     <h3 class="text-sm font-medium text-red-800">Error analyzing text</h3>
-                    <div class="mt-2 text-sm text-red-700" id="errorMessage">
+                    <div class="mt-2 text-sm text-red-700 break-words" id="errorMessage">
                         Something went wrong. Please try again.
                     </div>
                 </div>
@@ -202,8 +202,13 @@
         // Initialize Icons
         lucide.createIcons();
 
-        const apiKey = "AIzaSyBEoiLv7z9aDvKCwFsm-FBBpZbwxYXCqmI"; 
+        // --- IMPORTANT: PUT YOUR API KEY HERE ---
+        // Ensure there are no spaces inside the quotes!
+        const rawApiKey = "AIzaSyBEoiLv7z9aDvKCwFsm-FBBpZbwxYXCqmI"; 
         // ----------------------------------------
+
+        // Safely trim any accidental spaces from the key
+        const apiKey = rawApiKey.trim();
 
         // DOM Elements
         const textInput = document.getElementById('textInput');
@@ -233,7 +238,7 @@
                 return;
             }
             if (!apiKey) {
-                showError("API Key is missing! Please add your Gemini API Key to the code on GitHub.");
+                showError("API Key is missing! Please edit the HTML file on GitHub to add your Google AI Studio API key.");
                 return;
             }
 
@@ -250,7 +255,7 @@
                 displayResults(result);
             } catch (error) {
                 showError(error.message || "Failed to analyze the text. Please check the console for details.");
-                console.error(error);
+                console.error("Analysis Error:", error);
             } finally {
                 loadingState.classList.add('hidden');
                 loadingState.classList.remove('flex');
@@ -261,7 +266,8 @@
 
         // API Call with Exponential Backoff
         async function fetchWithRetry(text, targetLanguage, retries = 3) {
-            // CHANGED HERE: Using the public gemini-1.5-flash model
+            
+            // Using the universally supported gemini-1.5-flash model
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
             
             const systemPrompt = `You are "TruthLens", an expert fact-checker and AI text analyst designed to combat misinformation.
@@ -277,7 +283,8 @@
             const payload = {
                 contents: [{ parts: [{ text: text }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
-                tools: [{ google_search: {} }],
+                // Use the correct public syntax: googleSearch (camelCase)
+                tools: [{ googleSearch: {} }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -314,14 +321,13 @@
                     });
 
                     if (!response.ok) {
+                        // Extract exact error message from Google's servers
                         const errorData = await response.json().catch(() => null);
-                        console.error("API Error Response:", errorData || response.statusText);
-                        
-                        // If it's a 400 bad request, it might be tool compatibility, if 403 it's the key.
-                        if (response.status === 403) throw new Error("API Key is invalid or doesn't have permission.");
-                        if (response.status === 400) throw new Error("Bad Request - The API key might not support search grounding in your region.");
-                        
-                        throw new Error(`HTTP Error ${response.status}`);
+                        let detailMsg = `HTTP Error ${response.status}`;
+                        if (errorData && errorData.error && errorData.error.message) {
+                            detailMsg += ` - Google API Says: "${errorData.error.message}"`;
+                        }
+                        throw new Error(detailMsg);
                     }
 
                     const data = await response.json();
@@ -336,7 +342,7 @@
 
         function parseApiResponse(data) {
             const candidate = data.candidates?.[0];
-            if (!candidate) throw new Error("No candidate returned from API");
+            if (!candidate) throw new Error("No candidate returned from API. Google may have blocked the prompt for safety reasons.");
 
             // Extract JSON content
             const jsonText = candidate.content?.parts?.[0]?.text;
@@ -345,14 +351,14 @@
                 parsedData = JSON.parse(jsonText);
             } catch (e) {
                 console.error("Failed to parse JSON from AI", jsonText);
-                throw new Error("Invalid response format from AI");
+                throw new Error("The AI returned data in an invalid format. Please try again.");
             }
 
-            // Extract Grounding Sources
-            const attributions = candidate.groundingMetadata?.groundingAttributions || [];
-            const sources = attributions.map(a => ({
-                uri: a.web?.uri,
-                title: a.web?.title
+            // Extract Grounding Sources (Supporting both public 'chunks' and older 'attributions')
+            const chunks = candidate.groundingMetadata?.groundingChunks || candidate.groundingMetadata?.groundingAttributions || [];
+            const sources = chunks.map(chunk => ({
+                uri: chunk.web?.uri,
+                title: chunk.web?.title
             })).filter(s => s.uri && s.title);
 
             // Remove duplicates based on URL
