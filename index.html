@@ -202,8 +202,8 @@
         // Initialize Icons
         lucide.createIcons();
 
-        // Environment API Key (Automatically injected by the environment)
         const apiKey = "AIzaSyBEoiLv7z9aDvKCwFsm-FBBpZbwxYXCqmI"; 
+        // ----------------------------------------
 
         // DOM Elements
         const textInput = document.getElementById('textInput');
@@ -232,6 +232,10 @@
                 showError("Please enter some text to analyze.");
                 return;
             }
+            if (!apiKey) {
+                showError("API Key is missing! Please add your Gemini API Key to the code on GitHub.");
+                return;
+            }
 
             // UI Reset & Loading
             errorState.classList.add('hidden');
@@ -245,7 +249,7 @@
                 const result = await fetchWithRetry(text, languageSelect.value);
                 displayResults(result);
             } catch (error) {
-                showError("Failed to analyze the text. Our servers might be busy. Please try again.");
+                showError(error.message || "Failed to analyze the text. Please check the console for details.");
                 console.error(error);
             } finally {
                 loadingState.classList.add('hidden');
@@ -256,8 +260,9 @@
         });
 
         // API Call with Exponential Backoff
-        async function fetchWithRetry(text, targetLanguage, retries = 5) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        async function fetchWithRetry(text, targetLanguage, retries = 3) {
+            // CHANGED HERE: Using the public gemini-1.5-flash model
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
             
             const systemPrompt = `You are "TruthLens", an expert fact-checker and AI text analyst designed to combat misinformation.
             Analyze the user's text. 
@@ -287,8 +292,8 @@
                                 items: {
                                     type: "OBJECT",
                                     properties: {
-                                        source: { type: "STRING" }, // e.g., "Google Fact Check Tools", "ClaimBuster", "Grok"
-                                        verdict: { type: "STRING" } // Translated verdict
+                                        source: { type: "STRING" }, 
+                                        verdict: { type: "STRING" } 
                                     },
                                     required: ["source", "verdict"]
                                 }
@@ -309,7 +314,14 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        const errorData = await response.json().catch(() => null);
+                        console.error("API Error Response:", errorData || response.statusText);
+                        
+                        // If it's a 400 bad request, it might be tool compatibility, if 403 it's the key.
+                        if (response.status === 403) throw new Error("API Key is invalid or doesn't have permission.");
+                        if (response.status === 400) throw new Error("Bad Request - The API key might not support search grounding in your region.");
+                        
+                        throw new Error(`HTTP Error ${response.status}`);
                     }
 
                     const data = await response.json();
@@ -394,7 +406,6 @@
                     let icon = "info";
                     let iconColor = "text-gray-500";
                     
-                    // Simple heuristic to colorize verdicts based on English keywords (even if translated, we assume a mix or use default)
                     const verdictStr = ref.verdict.toLowerCase();
                     if (verdictStr.includes("fake") || verdictStr.includes("false") || verdictStr.includes("falso") || verdictStr.includes("faux") || score < 40) {
                         icon = "x-circle"; iconColor = "text-red-500";
@@ -459,10 +470,7 @@
                     </div>`;
             }
 
-            // Re-init newly added icons
             lucide.createIcons();
-
-            // Show results
             resultsSection.classList.remove('hidden');
         }
 
