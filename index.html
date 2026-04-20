@@ -1,18 +1,19 @@
 <!DOCTYPE html>
-<html lang="en-IN" class="dark">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Lie Detector | News & WhatsApp Forward Analyzer</title>
     
+    <!-- Load Tailwind FIRST -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind to use class-based dark mode SECOND -->
     <script>
-        tailwind = {
-            config: {
-                darkMode: 'class',
-            }
+        tailwind.config = {
+            darkMode: 'class',
         };
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -67,7 +68,8 @@
                 
                 <!-- Theme Toggle Button -->
                 <button id="themeToggleBtn" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" aria-label="Toggle Dark Mode">
-                    <i id="themeIcon" data-lucide="moon" class="w-5 h-5"></i>
+                    <span id="iconMoon" class="hidden"><i data-lucide="moon" class="w-5 h-5"></i></span>
+                    <span id="iconSun" class="hidden"><i data-lucide="sun" class="w-5 h-5"></i></span>
                 </button>
             </div>
         </div>
@@ -242,35 +244,37 @@
     <script>
         // --- THEME MANAGEMENT ---
         const themeToggleBtn = document.getElementById('themeToggleBtn');
-        const themeIcon = document.getElementById('themeIcon');
+        const iconMoon = document.getElementById('iconMoon');
+        const iconSun = document.getElementById('iconSun');
         const htmlElement = document.documentElement;
 
-        // Initialize Theme (Default to Dark)
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') {
-            htmlElement.classList.remove('dark');
-            themeIcon.setAttribute('data-lucide', 'sun');
-        } else {
-            // Default to dark if nothing saved, or explicitly saved as dark
-            htmlElement.classList.add('dark');
-            themeIcon.setAttribute('data-lucide', 'moon');
+        // Helper to apply the current theme to the UI
+        function applyTheme(isDark) {
+            if (isDark) {
+                htmlElement.classList.add('dark');
+                iconMoon.classList.remove('hidden');
+                iconSun.classList.add('hidden');
+            } else {
+                htmlElement.classList.remove('dark');
+                iconMoon.classList.add('hidden');
+                iconSun.classList.remove('hidden');
+            }
         }
 
-        // Toggle Theme
+        // Initialize Theme
+        const savedTheme = localStorage.getItem('theme');
+        // Default to dark mode unless 'light' was explicitly saved
+        let isDarkMode = savedTheme !== 'light';
+        applyTheme(isDarkMode);
+
+        // Toggle Theme Button Event
         themeToggleBtn.addEventListener('click', () => {
-            if (htmlElement.classList.contains('dark')) {
-                htmlElement.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-                themeIcon.setAttribute('data-lucide', 'sun');
-            } else {
-                htmlElement.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-                themeIcon.setAttribute('data-lucide', 'moon');
-            }
-            lucide.createIcons(); // Re-render the icon
+            isDarkMode = !isDarkMode;
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            applyTheme(isDarkMode);
         });
 
-        // Initialize Icons
+        // Initialize Icons AFTER theme logic sets up the DOM structure
         lucide.createIcons();
 
         // DOM Elements
@@ -413,9 +417,10 @@
                         const errorData = await response.json().catch(() => null);
                         const apiMsg = errorData?.error?.message || response.statusText;
                         
-                        if (response.status === 404 || apiMsg.includes("not found")) {
-                            console.warn(`Model ${modelName} not found. Trying next...`);
-                            lastErrorMessage = `Model ${modelName} failed.`;
+                        // Treat 404 (Not Found), 503 (Overloaded), and 429 (Rate Limited) as recoverable via fallback
+                        if (response.status === 404 || response.status === 503 || response.status === 429 || apiMsg.includes("not found") || apiMsg.includes("high demand")) {
+                            console.warn(`Model ${modelName} failed with status ${response.status}. Trying next...`);
+                            lastErrorMessage = `Model ${modelName} failed (${response.status}: ${apiMsg}).`;
                             continue; 
                         }
                         
@@ -434,7 +439,7 @@
                 }
             }
 
-            throw new Error(`All supported AI models failed to connect. Last error: ${lastErrorMessage}`);
+            throw new Error(`All supported AI models failed to connect or are currently overloaded. Last error: ${lastErrorMessage}`);
         }
 
         function parseApiResponse(data) {
