@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Lie Detector | News & WhatsApp Forward Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="bg-blue-600 p-2 rounded-lg">
+                    <i data-lucide="shield-alert" class="text-white w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900 leading-tight">TruthLens</h1>
+                    <p class="text-xs text-gray-500 font-medium">AI Forward & News Analyzer</p>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center space-x-4 text-sm text-gray-500">
+                <span class="flex items-center"><i data-lucide="globe" class="w-4 h-4 mr-1"></i> Live Web Search</span>
+                <span class="flex items-center"><i data-lucide="cpu" class="w-4 h-4 mr-1"></i> AI Powered</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-4xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
+        
+        <!-- Input Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 transition-all duration-300 hover:shadow-md">
+            <label for="textInput" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                <i data-lucide="message-square" class="w-4 h-4 mr-2 text-blue-500"></i>
+                Paste suspicious text or news here:
+            </label>
+            <textarea id="textInput" rows="5" 
+                class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none text-gray-700"
+                placeholder="e.g., 'UNESCO has declared the Indian National Anthem as the best in the world! Forward to 10 people...'"></textarea>
+            
+            <div class="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <p class="text-xs text-gray-400 flex items-center">
+                    <i data-lucide="info" class="w-4 h-4 mr-1"></i>
+                    Analyzes tone, logical fallacies, and checks live web sources.
+                </p>
+                <button id="analyzeBtn" class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-xl shadow-sm flex items-center justify-center transition-colors">
+                    <i data-lucide="scan-search" class="w-5 h-5 mr-2"></i>
+                    Analyze Text
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden flex flex-col items-center justify-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div class="loader mb-4"></div>
+            <h3 class="text-lg font-semibold text-gray-700" id="loadingText">Analyzing Content...</h3>
+            <p class="text-sm text-gray-500 mt-1">Cross-referencing with live web search</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i data-lucide="alert-triangle" class="h-5 w-5 text-red-400"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Error analyzing text</h3>
+                    <div class="mt-2 text-sm text-red-700" id="errorMessage">
+                        Something went wrong. Please try again.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden flex flex-col gap-6">
+            
+            <!-- Top Row: Score & Tone -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Trust Score Card -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center relative overflow-hidden md:col-span-1">
+                    <div class="absolute top-0 left-0 w-full h-1" id="scoreHeaderBar"></div>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Trust Score</h3>
+                    
+                    <div class="relative w-32 h-32 flex items-center justify-center rounded-full border-8" id="scoreRing">
+                        <span class="text-4xl font-bold text-gray-800" id="trustScoreValue">0</span>
+                        <span class="text-lg text-gray-500 font-medium ml-1">%</span>
+                    </div>
+                    
+                    <p class="mt-4 font-semibold text-lg" id="scoreLabel">Analyzing...</p>
+                </div>
+
+                <!-- Tone & Summary Card -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:col-span-2 flex flex-col justify-center">
+                    <div class="flex items-center mb-4">
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider w-24">Detected Tone</h3>
+                        <span id="toneBadge" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800 border border-gray-200">
+                            Neutral
+                        </span>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Fact-Check Summary</h3>
+                        <p class="text-gray-700 leading-relaxed" id="factCheckSummary">
+                            Summary will appear here.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Red Flags & Sources -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Red Flags -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                        <i data-lucide="flag" class="w-4 h-4 mr-2 text-red-500"></i> Red Flags / Manipulation
+                    </h3>
+                    <ul id="redFlagsList" class="space-y-3">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+                <!-- Sources -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                        <i data-lucide="link" class="w-4 h-4 mr-2 text-blue-500"></i> Grounding Sources
+                    </h3>
+                    <div id="sourcesContainer" class="space-y-3 max-h-48 overflow-y-auto pr-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Environment API Key (Automatically injected by the environment)
+        const apiKey = ""; 
+
+        // DOM Elements
+        const textInput = document.getElementById('textInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingText = document.getElementById('loadingText');
+
+        // Results DOM
+        const scoreRing = document.getElementById('scoreRing');
+        const trustScoreValue = document.getElementById('trustScoreValue');
+        const scoreLabel = document.getElementById('scoreLabel');
+        const scoreHeaderBar = document.getElementById('scoreHeaderBar');
+        const toneBadge = document.getElementById('toneBadge');
+        const factCheckSummary = document.getElementById('factCheckSummary');
+        const redFlagsList = document.getElementById('redFlagsList');
+        const sourcesContainer = document.getElementById('sourcesContainer');
+
+        // Main Analyze Event
+        analyzeBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                showError("Please enter some text to analyze.");
+                return;
+            }
+
+            // UI Reset & Loading
+            errorState.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            loadingState.classList.add('flex');
+            analyzeBtn.disabled = true;
+            analyzeBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+            try {
+                const result = await fetchWithRetry(text);
+                displayResults(result);
+            } catch (error) {
+                showError("Failed to analyze the text. Our servers might be busy. Please try again.");
+                console.error(error);
+            } finally {
+                loadingState.classList.add('hidden');
+                loadingState.classList.remove('flex');
+                analyzeBtn.disabled = false;
+                analyzeBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        });
+
+        // API Call with Exponential Backoff
+        async function fetchWithRetry(text, retries = 5) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            const systemPrompt = `You are "TruthLens", an expert fact-checker and AI text analyst designed to combat misinformation on social media and messaging apps.
+            Analyze the user's text. 
+            1. Fact-check the claims using the Google Search tool.
+            2. Determine the tone (e.g., Sensational, Misleading, Neutral, Satire, Panic-inducing).
+            3. Calculate a Trust Score from 0 to 100 (0 = completely fake/scam, 100 = completely verified fact).
+            4. Identify any red flags (e.g., "Urges forwarding", "No credible sources", "Emotional manipulation").
+            Return the output strictly in the requested JSON format.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                tools: [{ google_search: {} }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            trustScore: { type: "INTEGER" },
+                            tone: { type: "STRING" },
+                            factCheckSummary: { type: "STRING" },
+                            redFlags: { type: "ARRAY", items: { type: "STRING" } }
+                        },
+                        required: ["trustScore", "tone", "factCheckSummary", "redFlags"]
+                    }
+                }
+            };
+
+            let delay = 1000;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    return parseApiResponse(data);
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2; 
+                }
+            }
+        }
+
+        function parseApiResponse(data) {
+            const candidate = data.candidates?.[0];
+            if (!candidate) throw new Error("No candidate returned from API");
+
+            // Extract JSON content
+            const jsonText = candidate.content?.parts?.[0]?.text;
+            let parsedData;
+            try {
+                parsedData = JSON.parse(jsonText);
+            } catch (e) {
+                console.error("Failed to parse JSON from AI", jsonText);
+                throw new Error("Invalid response format from AI");
+            }
+
+            // Extract Grounding Sources
+            const attributions = candidate.groundingMetadata?.groundingAttributions || [];
+            const sources = attributions.map(a => ({
+                uri: a.web?.uri,
+                title: a.web?.title
+            })).filter(s => s.uri && s.title); // Filter out empty ones
+
+            // Remove duplicates based on URL
+            const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
+
+            return {
+                ...parsedData,
+                sources: uniqueSources
+            };
+        }
+
+        function displayResults(data) {
+            // Update Score
+            const score = data.trustScore;
+            trustScoreValue.textContent = score;
+            
+            let colorClass = "";
+            let ringColor = "";
+            let label = "";
+
+            if (score >= 80) {
+                colorClass = "bg-green-500";
+                ringColor = "border-green-500";
+                label = "Highly Credible";
+                toneBadge.className = "px-3 py-1 text-sm font-medium rounded-full bg-green-100 text-green-800 border border-green-200";
+            } else if (score >= 40) {
+                colorClass = "bg-yellow-500";
+                ringColor = "border-yellow-500";
+                label = "Mixed / Unverified";
+                toneBadge.className = "px-3 py-1 text-sm font-medium rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200";
+            } else {
+                colorClass = "bg-red-500";
+                ringColor = "border-red-500";
+                label = "Likely Fake / Misleading";
+                toneBadge.className = "px-3 py-1 text-sm font-medium rounded-full bg-red-100 text-red-800 border border-red-200";
+            }
+
+            scoreRing.className = `relative w-32 h-32 flex items-center justify-center rounded-full border-8 ${ringColor}`;
+            scoreLabel.textContent = label;
+            scoreLabel.className = `mt-4 font-semibold text-lg text-${colorClass.replace('bg-', '')}`;
+            scoreHeaderBar.className = `absolute top-0 left-0 w-full h-1 ${colorClass}`;
+
+            // Update Tone & Summary
+            toneBadge.textContent = data.tone;
+            factCheckSummary.textContent = data.factCheckSummary;
+
+            // Update Red Flags
+            redFlagsList.innerHTML = '';
+            if (data.redFlags && data.redFlags.length > 0) {
+                data.redFlags.forEach(flag => {
+                    const li = document.createElement('li');
+                    li.className = "flex items-start text-sm text-gray-700 bg-red-50 p-3 rounded-lg border border-red-100";
+                    li.innerHTML = `<i data-lucide="x-circle" class="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"></i> <span>${flag}</span>`;
+                    redFlagsList.appendChild(li);
+                });
+            } else {
+                redFlagsList.innerHTML = `<li class="text-sm text-gray-500 italic">No major red flags detected.</li>`;
+            }
+
+            // Update Sources
+            sourcesContainer.innerHTML = '';
+            if (data.sources && data.sources.length > 0) {
+                data.sources.forEach(source => {
+                    const domain = new URL(source.uri).hostname.replace('www.', '');
+                    const a = document.createElement('a');
+                    a.href = source.uri;
+                    a.target = "_blank";
+                    a.rel = "noopener noreferrer";
+                    a.className = "block p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition-colors group";
+                    a.innerHTML = `
+                        <p class="text-sm font-medium text-gray-800 group-hover:text-blue-700 line-clamp-1">${source.title}</p>
+                        <p class="text-xs text-gray-500 mt-1 flex items-center">
+                            <i data-lucide="external-link" class="w-3 h-3 mr-1"></i> ${domain}
+                        </p>
+                    `;
+                    sourcesContainer.appendChild(a);
+                });
+            } else {
+                sourcesContainer.innerHTML = `
+                    <div class="text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                        No external web sources were required or found for this analysis.
+                    </div>`;
+            }
+
+            // Re-init newly added icons
+            lucide.createIcons();
+
+            // Show results
+            resultsSection.classList.remove('hidden');
+        }
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorState.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
